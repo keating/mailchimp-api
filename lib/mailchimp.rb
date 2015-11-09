@@ -10,9 +10,13 @@ module Mailchimp
 
         attr_accessor :host, :path, :apikey, :debug, :session
 
-        def initialize(apikey=nil, debug=false)
+        def initialize(apikey=nil, debug=false, v1_export=false)
             @host = 'https://api.mailchimp.com'
-            @path = '/2.0/'
+            @path = if v1
+                      '/export/1.0/'
+                    else
+                      '/2.0/'
+                    end
             @dc = 'us1'
 
             unless apikey
@@ -36,7 +40,7 @@ module Mailchimp
             params[:apikey] = @apikey
             params = JSON.generate(params)
             r = @session.post(:path => "#{@path}#{url}.json", :headers => {'Content-Type' => 'application/json'}, :body => params)
-            
+
             cast_error(r.body) if r.status != 200
             return JSON.parse(r.body)
         end
@@ -206,6 +210,15 @@ module Mailchimp
         end
         def goal()
             Goal.new self
+        end
+
+        # Exports/dumps all Subscriber Activity for the requested campaign.
+        # @param [string] id	the campaign id to retrieve stats for (can be gathered using campaigns())
+        #      - [boolean] include_empty	optional – if set to "true" a record for every email address sent to will be returned even if there is no activity data. defaults to "false"
+        #      - [string] since	optional – only return activity recorded since a GMT timestamp – in YYYY-MM-DD HH:mm:ss format
+        def campaign_subscriber_activity(id, include_empty=false, since=nil)
+          _params = {id: id, include_empty: include_empty, since: since}
+          call 'campaignSubscriberActivity', _params
         end
     end
 end
