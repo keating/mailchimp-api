@@ -12,11 +12,7 @@ module Mailchimp
 
         def initialize(apikey=nil, debug=false, v1_export=false)
             @host = 'https://api.mailchimp.com'
-            @path = if v1
-                      '/export/1.0/'
-                    else
-                      '/2.0/'
-                    end
+            @path = '/2.0/'
             @dc = 'us1'
 
             unless apikey
@@ -37,12 +33,11 @@ module Mailchimp
         end
 
         def call(url, params={})
-            params[:apikey] = @apikey
-            params = JSON.generate(params)
-            r = @session.post(:path => "#{@path}#{url}.json", :headers => {'Content-Type' => 'application/json'}, :body => params)
+            call_common(url, params, @path)
+        end
 
-            cast_error(r.body) if r.status != 200
-            return JSON.parse(r.body)
+        def export_activities_call(url, params={})
+            call_common(url, params, '/export/1.0/')
         end
 
         def read_configs()
@@ -218,7 +213,18 @@ module Mailchimp
         #      - [string] since	optional – only return activity recorded since a GMT timestamp – in YYYY-MM-DD HH:mm:ss format
         def campaign_subscriber_activity(id, include_empty=false, since=nil)
           _params = {id: id, include_empty: include_empty, since: since}
-          call 'campaignSubscriberActivity', _params
+          export_activities_call 'campaignSubscriberActivity', _params
+        end
+
+    private
+
+        def call_common(url, params, path)
+            params[:apikey] = @apikey
+            params = JSON.generate(params)
+            r = @session.post(:path => "#{path}#{url}.json", :headers => {'Content-Type' => 'application/json'}, :body => params)
+
+            cast_error(r.body) if r.status != 200
+            return JSON.parse(r.body)
         end
     end
 end
